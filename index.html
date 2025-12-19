@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordPK - 单词对战 (最终修复版)</title>
+    <title>WordPK - 多词库对战版</title>
     <script src="https://cdn.goeasy.io/goeasy-2.6.6.min.js"></script>
     <style>
         :root { --primary: #2ea44f; --bg: #f6f8fa; --card-bg: #ffffff; --text: #24292e; --success: #28a745; --error: #d73a49; }
@@ -11,8 +11,8 @@
         body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 10px; }
         .container { width: 100%; max-width: 500px; background: var(--card-bg); padding: 2rem; border-radius: 6px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); border: 1px solid #e1e4e8; }
         .hidden { display: none !important; }
-        h1 { text-align: center; color: var(--text); margin-bottom: 1.5rem; display:flex; align-items:center; justify-content:center; gap:10px;}
-        input, button { width: 100%; padding: 10px; margin-bottom: 1rem; border-radius: 6px; border: 1px solid #e1e4e8; font-size: 16px; }
+        h1 { text-align: center; color: var(--text); margin-bottom: 1.5rem; }
+        input, button, select { width: 100%; padding: 10px; margin-bottom: 1rem; border-radius: 6px; border: 1px solid #e1e4e8; font-size: 16px; }
         button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
         button:disabled { background: #94d3a2; cursor: wait; }
         .word-box { font-size: 2rem; text-align: center; margin: 2rem 0; font-weight: 800; color: #0366d6; }
@@ -22,16 +22,17 @@
         .opt-btn.correct { background: var(--success); color: white; border-color: var(--success); }
         .opt-btn.wrong { background: var(--error); color: white; border-color: var(--error); }
         .player-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eaecef; }
+        .dict-select-box { background: #fffbdd; padding: 15px; border-radius: 6px; border: 1px solid #e1e4e8; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div id="view-home">
-        <h1><span>📚</span> WordPK</h1>
+        <h1>📚 WordPK 对战</h1>
         <input type="hidden" id="app-key" value="BC-519c0e3b87cb47ab99f68886dee2b2f9">
-        <input type="text" id="nick" placeholder="输入你的昵称" maxlength="8">
-        <button onclick="createRoom()">创建房间 (我是房主)</button>
+        <input type="text" id="nick" placeholder="输入昵称" maxlength="8">
+        <button onclick="createRoom()">我是房主：创建房间</button>
         <div style="display:flex; gap:10px;">
             <input type="text" id="room-code" placeholder="输入房间号" style="margin-bottom:0">
             <button onclick="joinRoom()" style="margin-bottom:0; width:40%; background:#6a737d">加入</button>
@@ -44,12 +45,21 @@
             <b id="lobby-room-id" style="font-size:24px; color:#0366d6; letter-spacing: 2px;"></b>
         </div>
         
-        <div id="host-panel" class="hidden" style="background:#f6f8fa; padding:15px; border-radius:6px; margin-bottom:20px;">
-            <div id="loading-tip">📡 正在从 GitHub 读取词库...</div>
-            <button onclick="startGame()" id="start-btn" disabled style="margin-top:10px;">读取中...</button>
+        <div id="host-panel" class="hidden" style="margin-bottom:20px;">
+            <div class="dict-select-box">
+                <label style="font-size:14px; color:#666; display:block; margin-bottom:5px;">请选择本局词库：</label>
+                <select id="dict-selector">
+                    <option value="words.txt">默认词库 (words.txt)</option>
+                    <option value="cet4.txt">英语四级 (cet4.txt)</option>
+                    <option value="cet6.txt">英语六级 (cet6.txt)</option>
+                    <option value="kaoyan.txt">考研核心 (kaoyan.txt)</option>
+                </select>
+                <button onclick="loadAndStart()" id="start-btn">加载词库并开始</button>
+                <div id="loading-tip" style="font-size:12px; color:#666; text-align:center;"></div>
+            </div>
         </div>
 
-        <div id="guest-msg" style="text-align:center; color:#586069; padding: 20px;">等待房主开始...</div>
+        <div id="guest-msg" style="text-align:center; color:#586069; padding: 20px;">等待房主选择词库...</div>
         <div><h4>当前玩家</h4><div id="lobby-players"></div></div>
     </div>
 
@@ -75,7 +85,7 @@
     };
 
     function initGoEasy() {
-        if(goeasy) return; // 防止重复连接
+        if(goeasy) return; 
         goeasy = GoEasy.getInstance({ host: "hangzhou.goeasy.io", appkey: document.getElementById('app-key').value, modules: ['pubsub'] });
         goeasy.connect({ onSuccess: () => console.log("GoEasy Connected") });
     }
@@ -87,7 +97,6 @@
         roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
         isHost = true;
         enterLobby();
-        loadRemoteWords(); 
     }
 
     function joinRoom() {
@@ -105,18 +114,29 @@
         document.getElementById('lobby-room-id').innerText = roomId;
         if(isHost) document.getElementById('host-panel').classList.remove('hidden');
         
-        // --- 🔥 修正点：加上了 .pubsub ---
         goeasy.pubsub.subscribe({ 
             channel: roomId, 
             onMessage: (m) => handleMessage(JSON.parse(m.content)) 
         });
     }
 
-    // 从 GitHub 读取 words.txt
-    function loadRemoteWords() {
-        fetch('words.txt?v=' + new Date().getTime())
-            .then(res => res.text())
+    // 🎯 核心修改：根据下拉菜单读取不同文件
+    function loadAndStart() {
+        const filename = document.getElementById('dict-selector').value;
+        const btn = document.getElementById('start-btn');
+        const tip = document.getElementById('loading-tip');
+        
+        btn.disabled = true;
+        btn.innerText = "正在读取 " + filename + "...";
+        
+        // 加上时间戳防止缓存
+        fetch(filename + '?v=' + new Date().getTime())
+            .then(res => {
+                if(!res.ok) throw new Error("GitHub上找不到文件: " + filename);
+                return res.text();
+            })
             .then(text => {
+                // 解析词库
                 fullWordList = text.split('\n').map(line => {
                     line = line.trim();
                     if(!line) return null;
@@ -129,9 +149,15 @@
                     return null;
                 }).filter(i => i);
                 
-                document.getElementById('loading-tip').innerHTML = `✅ 词库加载成功 (共${fullWordList.length}词)`;
-                document.getElementById('start-btn').disabled = false;
-                document.getElementById('start-btn').innerText = "开始游戏";
+                if(fullWordList.length < 5) throw new Error("词库单词太少了");
+                
+                tip.innerHTML = `✅ 成功加载 ${fullWordList.length} 个单词，即将开始...`;
+                setTimeout(startGameLoop, 1000); // 1秒后开始
+            })
+            .catch(err => {
+                alert("加载失败！请确认你是否已将 " + filename + " 上传到GitHub？\n错误信息: " + err.message);
+                btn.disabled = false;
+                btn.innerText = "加载词库并开始";
             });
     }
 
@@ -145,15 +171,13 @@
     }
 
     function sendMsg(payload) {
-        // --- 🔥 修正点：加上了 .pubsub ---
         goeasy.pubsub.publish({ 
             channel: roomId, 
             message: JSON.stringify({ ...payload, senderId: myNick+"_"+roomId, nick: myNick, score: myScore }) 
         });
     }
 
-    function startGame() {
-        if(fullWordList.length < 5) return alert("词库为空");
+    function startGameLoop() {
         let round = 0;
         const total = 15; 
         const nextQ = () => {
