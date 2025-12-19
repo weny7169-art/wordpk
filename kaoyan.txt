@@ -1,0 +1,185 @@
+process n.过程 v.加工
+growth n.增长;生长
+technology n.技术;工艺
+theory n.理论;原理
+economy n.经济;节约
+behavior n.行为;举止
+account n.账户;解释 v.说明
+economic adj.经济的
+individual adj.个人的 n.个人
+product n.产品;产物
+rate n.比率;速度 v.评估
+create v.创造;造成
+hard adj.努力的;硬的
+allow v.允许;给予
+line n.路线;排 v.排队
+market n.市场;行情
+lead v.引导;领先 n.铅
+period n.时期;周期
+require v.需要;要求
+political adj.政治的
+research n.研究 v.调查
+university n.大学
+view n.观点;景色 v.看待
+community n.社区;社会
+reason n.原因;理性 v.推理
+experience n.经验;经历
+likely adj.可能的 adv.或许
+develop v.发展;开发
+social adj.社会的;社交的
+provide v.提供;规定
+system n.系统;制度
+result n.结果 v.导致
+reduce v.减少;降低
+offer v.提供;出价
+particular adj.特别的;挑剔的
+environment n.环境
+project n.工程;计划 v.投射
+example n.例子;榜样
+state n.状态;国家 v.陈述
+produce v.生产;引起
+department n.部门;系
+knowledge n.知识;学问
+situation n.情况;形势
+ability n.能力;才能
+human adj.人类的 n.人
+history n.历史;经历
+information n.信息;通知
+effect n.影响;效果
+culture n.文化;修养
+business n.商业;生意
+achieve v.实现;达到
+condition n.条件;状况
+opportunity n.机会;时机
+challenge n.挑战 v.质疑
+resource n.资源;财力
+structure n.结构 v.构造
+material n.材料 adj.物质的
+success n.成功;成就
+influence n.影响 v.改变
+population n.人口;全体居民
+environment n.环境
+factor n.因素;要素
+current adj.当前的;流通的
+manage v.管理;设法做
+maintain v.维持;保养
+apply v.申请;应用
+determine v.决定;测定
+pattern n.模式;图案
+share v.分享;分担 n.份额
+science n.科学;学科
+compare v.比较;对照
+identify v.识别;鉴定
+feature n.特征;特写
+occur v.发生;出现
+concept n.概念;观念
+production n.生产;产量
+benefit n.利益 v.获益
+support v.支持;供养
+exist v.存在;生存
+related adj.相关的
+tradition n.传统;惯例
+principle n.原则;原理
+method n.方法;条理
+financial adj.金融的;财政的
+response n.反应;回答
+movement n.运动;活动
+specific adj.具体的;特定的
+focus v.聚焦 n.焦点
+function n.功能 v.运行
+quality n.质量;品质
+pressure n.压力;压迫
+authority n.权威;当局
+loss n.损失;减少
+competition n.竞争;比赛
+standard n.标准 adj.标准的
+essential adj.本质的;必要的
+various adj.各种各样的
+strategy n.战略;策略
+modern adj.现代的
+positive adj.积极的;肯定的
+potential adj.潜在的 n.潜力
+complex adj.复杂的 n.综合体
+significant adj.重要的;有意义的
+similar adj.相似的
+scientific adj.科学的
+moral adj.道德的 n.寓意
+maintain v.维持;维修
+primary adj.主要的;初级的
+investment n.投资
+measure v.测量 n.措施
+approach v.接近 n.方法
+critical adj.批评的;关键的
+attitude n.态度;看法
+disease n.疾病
+observe v.观察;遵守
+contact v.接触;联系
+demand v.要求;需要
+lay v.放置;产卵
+conflict n.冲突 v.斗争
+spirit n.精神;灵魂
+argument n.争论;论点
+complete adj.完全的 v.完成
+present adj.出席的 n.礼物
+contract n.合同 v.收缩
+performance n.表演;表现
+necessary adj.必要的
+discover v.发现
+previous adj.以前的
+security n.安全;证券
+operate v.操作;经营
+reaction n.反应;反作用
+access n.进入;通道
+event n.事件;大事
+employment n.就业;使用
+facility n.设施;设备
+reference n.参考;提及
+private adj.私人的;私有的
+doubt n.怀疑 v.不信
+attention n.注意;关注
+nature n.自然;本性
+legal adj.法律的;合法的
+specific adj.明确的;特效的
+cell n.细胞;单人牢房
+risk n.风险 v.冒险
+current adj.现在的;通用的
+growth n.生长;增长
+treatment n.治疗;对待
+establish v.建立;确立
+authority n.权威;官方
+character n.性格;角色
+communicate v.交流;通讯
+confidence n.信心;信任
+element n.元素;要素
+supply v.供给 n.供应
+ensure v.确保;保证
+extent n.程度;范围
+labor n.劳动;劳工
+threat n.威胁;恐吓
+intellectual adj.智力的 n.知识分子
+corporate adj.法人的;公司的
+experiment n.实验 v.尝试
+replace v.替换;取代
+standard n.标准;规格
+encourage v.鼓励;促进
+reflect v.反射;反映
+collection n.收集;收藏品
+combine v.结合;联合
+interpret v.解释;口译
+serve v.服务;服役
+attitude n.态度;看法
+stress n.压力;强调
+basis n.基础;根据
+impact n.影响;冲击
+definition n.定义;清晰度
+prevent v.预防;阻止
+benefit n.益处 v.有益
+failure n.失败;故障
+existence n.存在;生存
+committed adj.忠诚的;坚定的
+protect v.保护
+innovation n.创新;改革
+consume v.消耗;消费
+replace v.取代;接替
+estimate v.估计;估价
+promote v.促进;提升
