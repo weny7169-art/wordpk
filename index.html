@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordPK - 单词对战 (GitHub版)</title>
+    <title>WordPK - 单词对战 (最终修复版)</title>
     <script src="https://cdn.goeasy.io/goeasy-2.6.6.min.js"></script>
     <style>
-        :root { --primary: #2ea44f; /* GitHub Green */ --bg: #f6f8fa; --card-bg: #ffffff; --text: #24292e; --success: #28a745; --error: #d73a49; }
+        :root { --primary: #2ea44f; --bg: #f6f8fa; --card-bg: #ffffff; --text: #24292e; --success: #28a745; --error: #d73a49; }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
         body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 10px; }
         .container { width: 100%; max-width: 500px; background: var(--card-bg); padding: 2rem; border-radius: 6px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); border: 1px solid #e1e4e8; }
@@ -22,8 +22,6 @@
         .opt-btn.correct { background: var(--success); color: white; border-color: var(--success); }
         .opt-btn.wrong { background: var(--error); color: white; border-color: var(--error); }
         .player-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eaecef; }
-        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: normal; background: #eee; color: #666; }
-        .status-badge.ready { background: #dcffe4; color: #22863a; }
     </style>
 </head>
 <body>
@@ -52,22 +50,17 @@
         </div>
 
         <div id="guest-msg" style="text-align:center; color:#586069; padding: 20px;">等待房主开始...</div>
-        <div>
-            <h4>当前玩家</h4>
-            <div id="lobby-players"></div>
-        </div>
+        <div><h4>当前玩家</h4><div id="lobby-players"></div></div>
     </div>
 
     <div id="view-game" class="hidden">
         <div style="display:flex; justify-content:space-between; font-weight:bold; color:#586069; font-size: 14px;">
-            <span id="round-idx">Round 1</span>
-            <span id="my-score">得分: 0</span>
+            <span id="round-idx">Round 1</span><span id="my-score">得分: 0</span>
         </div>
         <div class="word-box" id="q-word">Loading...</div>
         <div class="opt-grid" id="q-opts"></div>
         <div style="margin-top:20px; border-top:1px solid #eaecef; padding-top:10px;">
-            <small>🏆 实时排行</small>
-            <div id="game-ranks"></div>
+            <small>🏆 实时排行</small><div id="game-ranks"></div>
         </div>
     </div>
 </div>
@@ -82,8 +75,9 @@
     };
 
     function initGoEasy() {
+        if(goeasy) return; // 防止重复连接
         goeasy = GoEasy.getInstance({ host: "hangzhou.goeasy.io", appkey: document.getElementById('app-key').value, modules: ['pubsub'] });
-        goeasy.connect({ onSuccess: () => console.log("Connected") });
+        goeasy.connect({ onSuccess: () => console.log("GoEasy Connected") });
     }
 
     function createRoom() {
@@ -93,7 +87,7 @@
         roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
         isHost = true;
         enterLobby();
-        loadRemoteWords(); // 房主自动加载远程词库
+        loadRemoteWords(); 
     }
 
     function joinRoom() {
@@ -110,30 +104,26 @@
         show('view-lobby');
         document.getElementById('lobby-room-id').innerText = roomId;
         if(isHost) document.getElementById('host-panel').classList.remove('hidden');
-        goeasy.subscribe({ channel: roomId, onMessage: (m) => handleMessage(JSON.parse(m.content)) });
+        
+        // --- 🔥 修正点：加上了 .pubsub ---
+        goeasy.pubsub.subscribe({ 
+            channel: roomId, 
+            onMessage: (m) => handleMessage(JSON.parse(m.content)) 
+        });
     }
 
-    // 🔥 核心：自动从 GitHub 读取 words.txt
+    // 从 GitHub 读取 words.txt
     function loadRemoteWords() {
-        // 加上时间戳防止缓存
         fetch('words.txt?v=' + new Date().getTime())
-            .then(res => {
-                if(!res.ok) throw new Error("未找到 words.txt");
-                return res.text();
-            })
+            .then(res => res.text())
             .then(text => {
-                // 智能解析：支持逗号或空格分隔
                 fullWordList = text.split('\n').map(line => {
                     line = line.trim();
                     if(!line) return null;
-                    // 尝试逗号分隔
                     let parts = line.split(/,|，/);
                     if(parts.length < 2) {
-                        // 尝试空格分隔 (处理 "abandon v.放弃" 这种格式)
                         let firstSpace = line.indexOf(' ');
-                        if(firstSpace > 0) {
-                            parts = [line.substring(0, firstSpace), line.substring(firstSpace).trim()];
-                        }
+                        if(firstSpace > 0) parts = [line.substring(0, firstSpace), line.substring(firstSpace).trim()];
                     }
                     if(parts && parts.length >= 2) return { en: parts[0].trim(), zh: parts[1].trim() };
                     return null;
@@ -142,9 +132,6 @@
                 document.getElementById('loading-tip').innerHTML = `✅ 词库加载成功 (共${fullWordList.length}词)`;
                 document.getElementById('start-btn').disabled = false;
                 document.getElementById('start-btn').innerText = "开始游戏";
-            })
-            .catch(err => {
-                document.getElementById('loading-tip').innerHTML = `❌ 加载失败: ${err.message}<br>请确保 words.txt 已上传到 GitHub`;
             });
     }
 
@@ -158,13 +145,17 @@
     }
 
     function sendMsg(payload) {
-        goeasy.publish({ channel: roomId, message: JSON.stringify({ ...payload, senderId: myNick+"_"+roomId, nick: myNick, score: myScore }) });
+        // --- 🔥 修正点：加上了 .pubsub ---
+        goeasy.pubsub.publish({ 
+            channel: roomId, 
+            message: JSON.stringify({ ...payload, senderId: myNick+"_"+roomId, nick: myNick, score: myScore }) 
+        });
     }
 
     function startGame() {
         if(fullWordList.length < 5) return alert("词库为空");
         let round = 0;
-        const total = 15; // 每局固定 15 题
+        const total = 15; 
         const nextQ = () => {
             if(round >= total) return; 
             round++;
