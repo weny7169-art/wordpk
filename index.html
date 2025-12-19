@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WordPK - 多词库对战版</title>
+    <title>WordPK - 单词对战 (错题显正版)</title>
     <script src="https://cdn.goeasy.io/goeasy-2.6.6.min.js"></script>
     <style>
         :root { --primary: #2ea44f; --bg: #f6f8fa; --card-bg: #ffffff; --text: #24292e; --success: #28a745; --error: #d73a49; }
@@ -19,8 +19,10 @@
         .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .opt-btn { background: #fafbfc; border: 1px solid #d1d5da; color: #24292e; padding: 15px 5px; cursor: pointer; border-radius: 6px; transition: 0.2s;}
         .opt-btn:hover { background: #f3f4f6; }
-        .opt-btn.correct { background: var(--success); color: white; border-color: var(--success); }
-        .opt-btn.wrong { background: var(--error); color: white; border-color: var(--error); }
+        /* 选中正确时的样式 */
+        .opt-btn.correct { background: var(--success) !important; color: white !important; border-color: var(--success) !important; }
+        /* 选中错误时的样式 */
+        .opt-btn.wrong { background: var(--error) !important; color: white !important; border-color: var(--error) !important; opacity: 0.6; }
         .player-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eaecef; }
         .dict-select-box { background: #fffbdd; padding: 15px; border-radius: 6px; border: 1px solid #e1e4e8; margin-bottom: 20px; }
     </style>
@@ -50,9 +52,9 @@
                 <label style="font-size:14px; color:#666; display:block; margin-bottom:5px;">请选择本局词库：</label>
                 <select id="dict-selector">
                     <option value="words.txt">默认词库 (words.txt)</option>
+                    <option value="kaoyan.txt">考研核心 (kaoyan.txt)</option>
                     <option value="cet4.txt">英语四级 (cet4.txt)</option>
                     <option value="cet6.txt">英语六级 (cet6.txt)</option>
-                    <option value="kaoyan.txt">考研核心 (kaoyan.txt)</option>
                 </select>
                 <button onclick="loadAndStart()" id="start-btn">加载词库并开始</button>
                 <div id="loading-tip" style="font-size:12px; color:#666; text-align:center;"></div>
@@ -120,7 +122,6 @@
         });
     }
 
-    // 🎯 核心修改：根据下拉菜单读取不同文件
     function loadAndStart() {
         const filename = document.getElementById('dict-selector').value;
         const btn = document.getElementById('start-btn');
@@ -129,14 +130,12 @@
         btn.disabled = true;
         btn.innerText = "正在读取 " + filename + "...";
         
-        // 加上时间戳防止缓存
         fetch(filename + '?v=' + new Date().getTime())
             .then(res => {
                 if(!res.ok) throw new Error("GitHub上找不到文件: " + filename);
                 return res.text();
             })
             .then(text => {
-                // 解析词库
                 fullWordList = text.split('\n').map(line => {
                     line = line.trim();
                     if(!line) return null;
@@ -151,11 +150,11 @@
                 
                 if(fullWordList.length < 5) throw new Error("词库单词太少了");
                 
-                tip.innerHTML = `✅ 成功加载 ${fullWordList.length} 个单词，即将开始...`;
-                setTimeout(startGameLoop, 1000); // 1秒后开始
+                tip.innerHTML = `✅ 成功加载 ${fullWordList.length} 个单词`;
+                setTimeout(startGameLoop, 1000); 
             })
             .catch(err => {
-                alert("加载失败！请确认你是否已将 " + filename + " 上传到GitHub？\n错误信息: " + err.message);
+                alert("加载失败: " + err.message);
                 btn.disabled = false;
                 btn.innerText = "加载词库并开始";
             });
@@ -191,11 +190,12 @@
             }
             opts.sort(()=>Math.random()-0.5); 
             sendMsg({ type: 'QUESTION', payload: { round, total, word: correct.en, opts, ans: correct.zh } });
-            setTimeout(nextQ, 5000);
+            setTimeout(nextQ, 5000); // 5秒一题
         };
         nextQ();
     }
 
+    // 🔥 核心修改：答题反馈逻辑
     function renderQuestion(q) {
         show('view-game');
         document.getElementById('round-idx').innerText = `Round ${q.round} / ${q.total}`;
@@ -203,16 +203,36 @@
         const box = document.getElementById('q-opts');
         box.innerHTML = '';
         let answered = false;
+
         q.opts.forEach(opt => {
             const btn = document.createElement('button');
             btn.className = 'opt-btn';
             btn.innerText = opt;
+            
             btn.onclick = () => {
-                if(answered) return;
+                if(answered) return; // 防止重复点击
                 answered = true;
+                
                 const isRight = (opt === q.ans);
-                btn.className += isRight ? ' correct' : ' wrong';
-                if(isRight) { myScore += 10; document.getElementById('my-score').innerText = "得分: " + myScore; }
+                
+                // 1. 如果选错了，把你点的这个标红
+                if(!isRight) {
+                    btn.classList.add('wrong');
+                }
+
+                // 2. 无论选对选错，都强制把“正确答案”标绿
+                const allBtns = box.querySelectorAll('.opt-btn');
+                allBtns.forEach(b => {
+                    if(b.innerText === q.ans) {
+                        b.classList.add('correct');
+                    }
+                });
+
+                // 3. 计分
+                if(isRight) { 
+                    myScore += 10; 
+                    document.getElementById('my-score').innerText = "得分: " + myScore; 
+                }
                 sendMsg({ type: 'SCORE_UPDATE' });
             };
             box.appendChild(btn);
