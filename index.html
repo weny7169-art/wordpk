@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordPK - 单词对战 (GitHub版)</title>
+    <script src="https://cdn.goeasy.io/goeasy-2.6.6.min.js"></script>
+    <style>
+        :root { --primary: #2ea44f; /* GitHub Green */ --bg: #f6f8fa; --card-bg: #ffffff; --text: #24292e; --success: #28a745; --error: #d73a49; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 10px; }
+        .container { width: 100%; max-width: 500px; background: var(--card-bg); padding: 2rem; border-radius: 6px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); border: 1px solid #e1e4e8; }
+        .hidden { display: none !important; }
+        h1 { text-align: center; color: var(--text); margin-bottom: 1.5rem; display:flex; align-items:center; justify-content:center; gap:10px;}
+        input, button { width: 100%; padding: 10px; margin-bottom: 1rem; border-radius: 6px; border: 1px solid #e1e4e8; font-size: 16px; }
+        button { background: var(--primary); color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #94d3a2; cursor: wait; }
+        .word-box { font-size: 2rem; text-align: center; margin: 2rem 0; font-weight: 800; color: #0366d6; }
+        .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .opt-btn { background: #fafbfc; border: 1px solid #d1d5da; color: #24292e; padding: 15px 5px; cursor: pointer; border-radius: 6px; transition: 0.2s;}
+        .opt-btn:hover { background: #f3f4f6; }
+        .opt-btn.correct { background: var(--success); color: white; border-color: var(--success); }
+        .opt-btn.wrong { background: var(--error); color: white; border-color: var(--error); }
+        .player-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eaecef; }
+        .status-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: normal; background: #eee; color: #666; }
+        .status-badge.ready { background: #dcffe4; color: #22863a; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="view-home">
+        <h1><span>📚</span> WordPK</h1>
+        <input type="hidden" id="app-key" value="BC-519c0e3b87cb47ab99f68886dee2b2f9">
+        <input type="text" id="nick" placeholder="输入你的昵称" maxlength="8">
+        <button onclick="createRoom()">创建房间 (我是房主)</button>
+        <div style="display:flex; gap:10px;">
+            <input type="text" id="room-code" placeholder="输入房间号" style="margin-bottom:0">
+            <button onclick="joinRoom()" style="margin-bottom:0; width:40%; background:#6a737d">加入</button>
+        </div>
+    </div>
+
+    <div id="view-lobby" class="hidden">
+        <div style="text-align:center; margin-bottom:20px;">
+            <p style="color:#586069; font-size:14px;">房间号</p>
+            <b id="lobby-room-id" style="font-size:24px; color:#0366d6; letter-spacing: 2px;"></b>
+        </div>
+        
+        <div id="host-panel" class="hidden" style="background:#f6f8fa; padding:15px; border-radius:6px; margin-bottom:20px;">
+            <div id="loading-tip">📡 正在从 GitHub 读取词库...</div>
+            <button onclick="startGame()" id="start-btn" disabled style="margin-top:10px;">读取中...</button>
+        </div>
+
+        <div id="guest-msg" style="text-align:center; color:#586069; padding: 20px;">等待房主开始...</div>
+        <div>
+            <h4>当前玩家</h4>
+            <div id="lobby-players"></div>
+        </div>
+    </div>
+
+    <div id="view-game" class="hidden">
+        <div style="display:flex; justify-content:space-between; font-weight:bold; color:#586069; font-size: 14px;">
+            <span id="round-idx">Round 1</span>
+            <span id="my-score">得分: 0</span>
+        </div>
+        <div class="word-box" id="q-word">Loading...</div>
+        <div class="opt-grid" id="q-opts"></div>
+        <div style="margin-top:20px; border-top:1px solid #eaecef; padding-top:10px;">
+            <small>🏆 实时排行</small>
+            <div id="game-ranks"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let goeasy = null, myNick = "", roomId = "", isHost = false, myScore = 0;
+    let players = {}, fullWordList = [];
+
+    const show = (id) => {
+        ['view-home','view-lobby','view-game'].forEach(v => document.getElementById(v).classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    };
+
+    function initGoEasy() {
+        goeasy = GoEasy.getInstance({ host: "hangzhou.goeasy.io", appkey: document.getElementById('app-key').value, modules: ['pubsub'] });
+        goeasy.connect({ onSuccess: () => console.log("Connected") });
+    }
+
+    function createRoom() {
+        const n = document.getElementById('nick').value.trim();
+        if(!n) return alert("请输入昵称");
+        myNick = n; initGoEasy();
+        roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
+        isHost = true;
+        enterLobby();
+        loadRemoteWords(); // 房主自动加载远程词库
+    }
+
+    function joinRoom() {
+        const n = document.getElementById('nick').value.trim();
+        const c = document.getElementById('room-code').value.trim().toUpperCase();
+        if(!n || !c) return alert("请输入信息");
+        myNick = n; roomId = c; initGoEasy();
+        isHost = false;
+        enterLobby();
+        setTimeout(() => sendMsg({ type: 'JOIN' }), 500);
+    }
+
+    function enterLobby() {
+        show('view-lobby');
+        document.getElementById('lobby-room-id').innerText = roomId;
+        if(isHost) document.getElementById('host-panel').classList.remove('hidden');
+        goeasy.subscribe({ channel: roomId, onMessage: (m) => handleMessage(JSON.parse(m.content)) });
+    }
+
+    // 🔥 核心：自动从 GitHub 读取 words.txt
+    function loadRemoteWords() {
+        // 加上时间戳防止缓存
+        fetch('words.txt?v=' + new Date().getTime())
+            .then(res => {
+                if(!res.ok) throw new Error("未找到 words.txt");
+                return res.text();
+            })
+            .then(text => {
+                // 智能解析：支持逗号或空格分隔
+                fullWordList = text.split('\n').map(line => {
+                    line = line.trim();
+                    if(!line) return null;
+                    // 尝试逗号分隔
+                    let parts = line.split(/,|，/);
+                    if(parts.length < 2) {
+                        // 尝试空格分隔 (处理 "abandon v.放弃" 这种格式)
+                        let firstSpace = line.indexOf(' ');
+                        if(firstSpace > 0) {
+                            parts = [line.substring(0, firstSpace), line.substring(firstSpace).trim()];
+                        }
+                    }
+                    if(parts && parts.length >= 2) return { en: parts[0].trim(), zh: parts[1].trim() };
+                    return null;
+                }).filter(i => i);
+                
+                document.getElementById('loading-tip').innerHTML = `✅ 词库加载成功 (共${fullWordList.length}词)`;
+                document.getElementById('start-btn').disabled = false;
+                document.getElementById('start-btn').innerText = "开始游戏";
+            })
+            .catch(err => {
+                document.getElementById('loading-tip').innerHTML = `❌ 加载失败: ${err.message}<br>请确保 words.txt 已上传到 GitHub`;
+            });
+    }
+
+    function handleMessage(data) {
+        if(data.senderId) {
+            players[data.senderId] = { nick: data.nick, score: data.score || 0 };
+            renderPlayers();
+        }
+        if(data.type === 'JOIN' && isHost) sendMsg({ type: 'WELCOME' });
+        else if(data.type === 'QUESTION') renderQuestion(data.payload);
+    }
+
+    function sendMsg(payload) {
+        goeasy.publish({ channel: roomId, message: JSON.stringify({ ...payload, senderId: myNick+"_"+roomId, nick: myNick, score: myScore }) });
+    }
+
+    function startGame() {
+        if(fullWordList.length < 5) return alert("词库为空");
+        let round = 0;
+        const total = 15; // 每局固定 15 题
+        const nextQ = () => {
+            if(round >= total) return; 
+            round++;
+            const correct = fullWordList[Math.floor(Math.random()*fullWordList.length)];
+            let opts = [correct.zh];
+            while(opts.length < 4) {
+                const r = fullWordList[Math.floor(Math.random()*fullWordList.length)].zh;
+                if(!opts.includes(r)) opts.push(r);
+            }
+            opts.sort(()=>Math.random()-0.5); 
+            sendMsg({ type: 'QUESTION', payload: { round, total, word: correct.en, opts, ans: correct.zh } });
+            setTimeout(nextQ, 5000);
+        };
+        nextQ();
+    }
+
+    function renderQuestion(q) {
+        show('view-game');
+        document.getElementById('round-idx').innerText = `Round ${q.round} / ${q.total}`;
+        document.getElementById('q-word').innerText = q.word;
+        const box = document.getElementById('q-opts');
+        box.innerHTML = '';
+        let answered = false;
+        q.opts.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.innerText = opt;
+            btn.onclick = () => {
+                if(answered) return;
+                answered = true;
+                const isRight = (opt === q.ans);
+                btn.className += isRight ? ' correct' : ' wrong';
+                if(isRight) { myScore += 10; document.getElementById('my-score').innerText = "得分: " + myScore; }
+                sendMsg({ type: 'SCORE_UPDATE' });
+            };
+            box.appendChild(btn);
+        });
+    }
+
+    function renderPlayers() {
+        const list = Object.values(players).sort((a,b)=>b.score - a.score);
+        const html = list.map(p => `<div class="player-row"><span>${p.nick}</span><b style="color:${p.score>0?'#28a745':'#999'}">${p.score}</b></div>`).join('');
+        const area = document.getElementById('view-lobby').classList.contains('hidden') ? 'game-ranks' : 'lobby-players';
+        document.getElementById(area).innerHTML = html;
+    }
+</script>
+</body>
+</html>
